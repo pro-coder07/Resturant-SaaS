@@ -1,0 +1,116 @@
+import 'dotenv/config';
+import logger from './src/utils/logger.js';
+import { validateEnvironment, getConfig } from './src/config/environment.js';
+import { connectSupabase } from './src/config/supabase.js';
+import app from './src/app.js';
+
+const startServer = async () => {
+  try {
+    logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.info('🚀 BACKEND INITIALIZATION STARTED');
+    logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    // Validate environment variables
+    validateEnvironment();
+    logger.info('✅ All required environment variables are set');
+
+    const config = getConfig();
+
+    // Connect to Supabase
+    logger.info('📦 Connecting to Supabase PostgreSQL...');
+    let supabase = null;
+    try {
+      supabase = await connectSupabase();
+      logger.info('✅ DATABASE CONNECTED SUCCESSFULLY');
+    } catch (dbError) {
+      logger.error('❌ DATABASE CONNECTION FAILED');
+      logger.error(`   Error: ${dbError.message}`);
+      process.exit(1);
+    }
+
+    // Start server
+    const server = app.listen(config.port, () => {
+      logger.info('');
+      logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      logger.info('✅ BACKEND CONNECTED AND RUNNING');
+      logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      logger.info('');
+      logger.info(`🌍 Environment: ${config.nodeEnv || 'development'}`);
+      logger.info(`🎯 Server URL: http://localhost:${config.port}`);
+      logger.info(`📊 API Base: http://localhost:${config.port}/api`);
+      logger.info(`📝 API Version: ${config.apiVersion || 'v1'}`);
+      logger.info('');
+      logger.info('📌 Key Endpoints:');
+      logger.info(`   - POST   http://localhost:${config.port}/api/v1/auth/register (Register)`);
+      logger.info(`   - POST   http://localhost:${config.port}/api/v1/auth/login (Login)`);
+      logger.info(`   - GET    http://localhost:${config.port}/api/v1/menu (Get Menu)`);
+      logger.info(`   - POST   http://localhost:${config.port}/api/v1/orders (Create Order)`);
+      logger.info(`   - GET    http://localhost:${config.port}/api/v1/kitchen (Kitchen Queue)`);
+      logger.info('');
+      logger.info(`💾 Database: ✅ Supabase PostgreSQL`);
+      logger.info(`☁️  Cloudinary: ✅ Configured`);
+      logger.info(`🔐 Authentication: ✅ JWT + Cookies`);
+      logger.info('');
+      logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      logger.info('🎯 Ready to handle requests!');
+      logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    });
+
+    // Graceful shutdown
+    const gracefulShutdown = (signal) => {
+      logger.warn('');
+      logger.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      logger.warn(`⏹️  ${signal} signal received`);
+      logger.warn('🛑 BACKEND SHUTDOWN IN PROGRESS');
+      logger.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+      server.close(() => {
+        logger.info('✅ HTTP server closed gracefully');
+        logger.info('👋 BACKEND DISCONNECTED');
+        process.exit(0);
+      });
+
+      // Force shutdown after 10 seconds
+      setTimeout(() => {
+        logger.error('❌ Forced shutdown after timeout');
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+    // Unhandled promise rejection
+    process.on('unhandledRejection', (reason, promise) => {
+      logger.error('');
+      logger.error('❌ UNHANDLED REJECTION DETECTED');
+      logger.error(`💥 Promise: ${promise}`);
+      logger.error(`📝 Reason: ${reason}`);
+      logger.error('');
+    });
+
+    // Uncaught exception
+    process.on('uncaughtException', (error) => {
+      logger.error('');
+      logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      logger.error('❌ CRITICAL ERROR - UNCAUGHT EXCEPTION');
+      logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      logger.error(`📝 Error: ${error.message}`);
+      logger.error(`🔍 Stack: ${error.stack}`);
+      logger.error('🛑 SHUTTING DOWN BACKEND');
+      logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      process.exit(1);
+    });
+  } catch (error) {
+    logger.error('');
+    logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.error('❌ FAILED TO START BACKEND');
+    logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.error(`📝 Error: ${error.message}`);
+    logger.error(`🔍 Stack: ${error.stack}`);
+    logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    process.exit(1);
+  }
+};
+
+startServer();

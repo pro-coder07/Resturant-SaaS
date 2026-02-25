@@ -1,0 +1,37 @@
+document.body.innerHTML = `
+  <h1>Frontend Configuration Check</h1>
+  <p><strong>API Base URL:</strong> <span id="api-url"></span></p>
+  <p><strong>Environment:</strong> <span id="env"></span></p>
+  <p><strong>LocalStorage:</strong></p>
+  <ul id="storage-list"></ul>
+  <button onclick="testLogin()">Test Login</button>
+  <div id="result"></div>
+`;
+
+const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+document.getElementById('api-url').textContent = apiUrl;
+document.getElementById('env').textContent = JSON.stringify(import.meta.env, null, 2);
+
+const storageList = document.getElementById('storage-list');
+for (let i = 0; i < localStorage.length; i++) {
+  const key = localStorage.key(i);
+  const li = document.createElement('li');
+  li.textContent = `${key}: ${localStorage.getItem(key).substring(0, 50)}...`;
+  storageList.appendChild(li);
+}
+
+async function testLogin() {
+  const resultDiv = document.getElementById('result');
+  try {
+    const response = await fetch(`${apiUrl}/v1/auth/login`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
+      body: JSON.stringify({email: 'test@example.com', password: 'Test123@456'})
+    });
+    const data = await response.json();
+    resultDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+  } catch(e) {
+    resultDiv.innerHTML = `<pre style="color:red;">Error: ${e.message}</pre>`;
+  }
+}
