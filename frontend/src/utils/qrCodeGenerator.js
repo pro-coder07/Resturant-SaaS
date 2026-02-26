@@ -8,9 +8,9 @@ import QRCode from 'qrcode';
  */
 export const generateTableQRCode = async (table) => {
   try {
-    // Point to Vercel frontend, not Render backend
+    // Point to Render frontend where the actual app is deployed
     const baseUrl = import.meta.env.PROD 
-      ? 'https://restromaxsaas.vercel.app' 
+      ? 'https://resturant-saas-1.onrender.com' 
       : window.location.origin;
     const qrValue = `${baseUrl}/menu?table=${table.tableNumber}`;
     console.log('📱 Generating QR for table', table.tableNumber, 'URL:', qrValue);
