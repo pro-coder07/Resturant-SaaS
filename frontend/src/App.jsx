@@ -13,6 +13,7 @@ import Orders from './pages/Orders';
 import Kitchen from './pages/Kitchen';
 import Analytics from './pages/Analytics';
 import CustomerMenu from './pages/CustomerMenu';
+import OrderStatus from './pages/OrderStatus';
 import Tables from './pages/Tables';
 import Staff from './pages/Staff';
 import QRTest from './pages/QRTest';
@@ -34,6 +35,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/menu" element={<CustomerMenu />} />
+          <Route path="/order-status" element={<OrderStatus />} />
 
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>

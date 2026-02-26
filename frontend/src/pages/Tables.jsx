@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useApi } from '../hooks/useApi';
 import { tableAPI } from '../services/apiEndpoints';
-import { Plus, Edit2, Trash2, X, AlertCircle, Loader, QrCode } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, AlertCircle, Loader, QrCode, Download } from 'lucide-react';
+import QRCodeModal from '../components/QRCodeModal';
+import { generateBulkQRCodes } from '../utils/qrCodeGenerator';
 
 const TABLE_STATUS_COLORS = {
   available: 'bg-green-100 text-green-800',
@@ -19,6 +21,8 @@ export default function Tables() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [selectedTableForQR, setSelectedTableForQR] = useState(null);
   const [formData, setFormData] = useState({
     tableNumber: '',
     seatCapacity: '',
@@ -125,6 +129,29 @@ export default function Tables() {
     }
   };
 
+  const handleShowQRCode = (table) => {
+    setSelectedTableForQR(table);
+    setShowQRModal(true);
+  };
+
+  const handleBulkExportQR = async () => {
+    if (tables.length === 0) {
+      setError('No tables to export');
+      return;
+    }
+
+    try {
+      setError(null);
+      setSuccess('Generating QR codes...');
+      await generateBulkQRCodes(tables, 'Your Restaurant');
+      setSuccess('QR codes generated successfully!');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error('Error exporting QR codes:', err);
+      setError('Failed to export QR codes');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -157,13 +184,25 @@ export default function Tables() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Table Management</h1>
-        <button
-          onClick={handleAddTable}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-        >
-          <Plus className="w-5 h-5" />
-          Add Table
-        </button>
+        <div className="flex gap-2">
+          {tables.length > 0 && (
+            <button
+              onClick={handleBulkExportQR}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+              title="Export all table QR codes for printing"
+            >
+              <Download className="w-5 h-5" />
+              Export All QR Codes
+            </button>
+          )}
+          <button
+            onClick={handleAddTable}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus className="w-5 h-5" />
+            Add Table
+          </button>
+        </div>
       </div>
 
       {/* Status Summary */}
@@ -219,6 +258,14 @@ export default function Tables() {
 
               <div className="flex gap-2 pt-4 border-t border-gray-200">
                 <button
+                  onClick={() => handleShowQRCode(table)}
+                  className="flex-1 p-2 hover:bg-green-100 rounded-lg text-green-600 transition flex items-center justify-center gap-2"
+                  title="View and download QR code"
+                >
+                  <QrCode className="w-4 h-4" />
+                  QR Code
+                </button>
+                <button
                   onClick={() => handleEditTable(table)}
                   className="flex-1 p-2 hover:bg-blue-100 rounded-lg text-blue-600 transition flex items-center justify-center gap-2"
                 >
@@ -248,6 +295,18 @@ export default function Tables() {
           </div>
         )}
       </div>
+
+      {/* QR Code Modal */}
+      {showQRModal && selectedTableForQR && (
+        <QRCodeModal
+          table={selectedTableForQR}
+          restaurantName="Your Restaurant"
+          onClose={() => {
+            setShowQRModal(false);
+            setSelectedTableForQR(null);
+          }}
+        />
+      )}
 
       {/* Form Modal */}
       {showForm && (

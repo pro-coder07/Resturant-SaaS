@@ -1,25 +1,30 @@
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApi } from '../hooks/useApi';
 import { customerAPI, menuAPI } from '../services/apiEndpoints';
-import { ShoppingCart, Plus, Minus, Loader, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Loader, ArrowLeft, Check, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '../utils/formatters';
 
 export default function CustomerMenu() {
   const [searchParams] = useSearchParams();
-  const qrCodeData = searchParams.get('table');
+  const navigate = useNavigate();
+  const tableNumber = searchParams.get('table');
 
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [orderStatus, setOrderStatus] = useState(null); // 'success', 'error'
+  const [orderMessage, setOrderMessage] = useState('');
 
   const { data: menuItems = [], loading } = useApi(
     () => menuAPI.getItems({ limit: 100 })
   );
 
-  if (!qrCodeData) {
+  if (!tableNumber) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
         <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Invalid QR Code</h1>
           <p className="text-gray-600">Please scan a valid table QR code</p>
         </div>
@@ -54,6 +59,55 @@ export default function CustomerMenu() {
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+  const handlePlaceOrder = async () => {
+    if (cart.length === 0) {
+      setOrderStatus('error');
+      setOrderMessage('Your cart is empty');
+      setTimeout(() => setOrderStatus(null), 3000);
+      return;
+    }
+
+    setIsPlacingOrder(true);
+    setOrderStatus(null);
+
+    try {
+      const orderData = {
+        tableNumber: parseInt(tableNumber),
+        items: cart.map(item => ({
+          menuItemId: item.id,
+          quantity: item.quantity,
+          unitPrice: item.price,
+        })),
+        totalAmount: cartTotal,
+        paymentMethod: 'cash',
+        notes: '',
+      };
+
+      console.log('📤 Submitting order:', orderData);
+
+      const response = await customerAPI.placeOrder(orderData);
+
+      console.log('✅ Order placed successfully:', response);
+
+      setOrderStatus('success');
+      setOrderMessage('Order placed successfully! The kitchen will start preparing your food.');
+      setCart([]);
+      setShowCart(false);
+
+      setTimeout(() => {
+        navigate(`/order-status?order=${response.id}&table=${tableNumber}`);
+      }, 3000);
+    } catch (error) {
+      console.error('❌ Error placing order:', error);
+      setOrderStatus('error');
+      setOrderMessage(
+        error.response?.data?.message || error.message || 'Failed to place order. Please try again.'
+      );
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -64,10 +118,31 @@ export default function CustomerMenu() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Status Messages */}
+      {orderStatus === 'success' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg p-8 text-center max-w-md w-full">
+            <Check className="w-12 h-12 text-green-600 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Confirmed!</h2>
+            <p className="text-gray-600">{orderMessage}</p>
+          </div>
+        </div>
+      )}
+
+      {orderStatus === 'error' && (
+        <div className="fixed top-4 right-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 z-50 max-w-md">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+          <p className="text-red-700">{orderMessage}</p>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Menu</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Menu</h1>
+            <p className="text-sm text-gray-600">Table {tableNumber}</p>
+          </div>
           <button
             onClick={() => setShowCart(!showCart)}
             className="relative p-2 hover:bg-gray-100 rounded-lg transition"
@@ -84,7 +159,6 @@ export default function CustomerMenu() {
 
       <div className="max-w-4xl mx-auto px-6 py-8">
         {showCart ? (
-          // Cart View
           <div>
             <button
               onClick={() => setShowCart(false)}
@@ -96,6 +170,7 @@ export default function CustomerMenu() {
 
             {cart.length === 0 ? (
               <div className="text-center py-12">
+                <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-600">Your cart is empty</p>
               </div>
             ) : (
@@ -134,15 +209,28 @@ export default function CustomerMenu() {
                     <span>Total:</span>
                     <span>{formatCurrency(cartTotal)}</span>
                   </div>
-                  <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
-                    Place Order
+                  <button
+                    onClick={handlePlaceOrder}
+                    disabled={isPlacingOrder || cart.length === 0}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isPlacingOrder ? (
+                      <>
+                        <Loader className="w-5 h-5 animate-spin" />
+                        Placing Order...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-5 h-5" />
+                        Place Order
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
             )}
           </div>
         ) : (
-          // Menu View
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {menuItems?.items?.map(item => (
               <div key={item.id} className="bg-white rounded-lg shadow-soft hover:shadow-md-soft transition overflow-hidden">
