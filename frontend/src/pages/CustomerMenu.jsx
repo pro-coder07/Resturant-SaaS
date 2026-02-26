@@ -1,7 +1,7 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useApi } from '../hooks/useApi';
-import { customerAPI, menuAPI } from '../services/apiEndpoints';
+import { customerAPI } from '../services/apiEndpoints';
 import { ShoppingCart, Plus, Minus, Loader, ArrowLeft, Check, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '../utils/formatters';
 
@@ -16,9 +16,17 @@ export default function CustomerMenu() {
   const [orderStatus, setOrderStatus] = useState(null); // 'success', 'error'
   const [orderMessage, setOrderMessage] = useState('');
 
-  const { data: menuItems = [], loading } = useApi(
-    () => menuAPI.getItems({ limit: 100 })
+  console.log('🔍 CustomerMenu loaded - Query params:', Object.fromEntries(searchParams));
+  console.log('📊 Table number from QR:', tableNumber);
+
+  const { data: menuItems = [], loading, error: apiError } = useApi(
+    () => customerAPI.getPublicMenu(tableNumber)
   );
+
+  // Log API errors
+  if (apiError) {
+    console.error('❌ API Error fetching menu:', apiError);
+  }
 
   if (!tableNumber) {
     return (
@@ -111,7 +119,28 @@ export default function CustomerMenu() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader className="w-8 h-8 animate-spin text-blue-600" />
+        <div className="text-center">
+          <Loader className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading menu...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (apiError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="text-center max-w-md">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Menu</h1>
+          <p className="text-gray-600 mb-6">{apiError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }

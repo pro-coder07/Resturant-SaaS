@@ -8,8 +8,11 @@ import QRCode from 'qrcode';
  */
 export const generateTableQRCode = async (table) => {
   try {
-    const baseUrl = window.location.origin;
+    const baseUrl = import.meta.env.PROD 
+      ? 'https://resturant-saas.onrender.com' 
+      : window.location.origin;
     const qrValue = `${baseUrl}/menu?table=${table.tableNumber}`;
+    console.log('📱 Generating QR for table', table.tableNumber, 'URL:', qrValue);
 
     const imageData = await QRCode.toDataURL(qrValue, {
       errorCorrectionLevel: 'H',

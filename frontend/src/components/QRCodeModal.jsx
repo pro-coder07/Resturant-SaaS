@@ -12,9 +12,11 @@ export default function QRCodeModal({ table, restaurantName, onClose }) {
     const generateQR = async () => {
       try {
         // Generate QR code that links to the menu page with table number
-        // Assuming your frontend is deployed, adjust this URL as needed
-        const baseUrl = window.location.origin;
+        const baseUrl = import.meta.env.PROD 
+          ? 'https://resturant-saas.onrender.com' 
+          : window.location.origin;
         const qrValue = `${baseUrl}/menu?table=${table.tableNumber}`;
+        console.log('📱 Generating QR Code URL:', qrValue);
 
         await QRCode.toCanvas(canvasRef.current, qrValue, {
           errorCorrectionLevel: 'H',

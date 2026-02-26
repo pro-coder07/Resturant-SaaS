@@ -19,20 +19,32 @@ const startServer = async () => {
     // Connect to Supabase
     logger.info('📦 Connecting to Supabase PostgreSQL...');
     let supabase = null;
-    try {
-      supabase = await connectSupabase();
-      logger.info('✅ DATABASE CONNECTED SUCCESSFULLY');
-    } catch (dbError) {
-      logger.error('❌ DATABASE CONNECTION FAILED');
-      logger.error(`   Error: ${dbError.message}`);
-      process.exit(1);
-    }
+    
+    // Attempt to connect but don't block server startup
+    connectSupabase()
+      .then(() => {
+        logger.info('✅ DATABASE CONNECTED SUCCESSFULLY');
+      })
+      .catch((dbError) => {
+        logger.warn('⚠️  DATABASE CONNECTION FAILED (will retry)');
+        logger.warn(`   Error: ${dbError.message}`);
+        
+        // Retry connection every 30 seconds
+        setInterval(async () => {
+          try {
+            await connectSupabase();
+            logger.info('✅ DATABASE RECONNECTED SUCCESSFULLY');
+          } catch (retryError) {
+            logger.warn('⚠️  Database reconnection still failing:', retryError.message);
+          }
+        }, 30000);
+      });
 
-    // Start server
+    // Start server immediately
     const server = app.listen(config.port, () => {
       logger.info('');
       logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      logger.info('✅ BACKEND CONNECTED AND RUNNING');
+      logger.info('✅ BACKEND HTTP SERVER STARTED');
       logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       logger.info('');
       logger.info(`🌍 Environment: ${config.nodeEnv || 'development'}`);
@@ -41,13 +53,13 @@ const startServer = async () => {
       logger.info(`📝 API Version: ${config.apiVersion || 'v1'}`);
       logger.info('');
       logger.info('📌 Key Endpoints:');
+      logger.info(`   - GET    http://localhost:${config.port}/api/health (Health Check)`);
       logger.info(`   - POST   http://localhost:${config.port}/api/v1/auth/register (Register)`);
       logger.info(`   - POST   http://localhost:${config.port}/api/v1/auth/login (Login)`);
       logger.info(`   - GET    http://localhost:${config.port}/api/v1/menu (Get Menu)`);
       logger.info(`   - POST   http://localhost:${config.port}/api/v1/orders (Create Order)`);
       logger.info(`   - GET    http://localhost:${config.port}/api/v1/kitchen (Kitchen Queue)`);
       logger.info('');
-      logger.info(`💾 Database: ✅ Supabase PostgreSQL`);
       logger.info(`☁️  Cloudinary: ✅ Configured`);
       logger.info(`🔐 Authentication: ✅ JWT + Cookies`);
       logger.info('');
