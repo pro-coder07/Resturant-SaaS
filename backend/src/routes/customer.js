@@ -19,8 +19,10 @@ const tableSchema = Joi.object({
 router.get('/menu/items', async (req, res) => {
   try {
     const { table } = req.query;
+    console.log(`📋 Customer menu request - Table: ${table}`);
 
     if (!table) {
+      console.warn('⚠️  Missing table parameter');
       return res.status(400).json({
         statusCode: 400,
         success: false,
@@ -29,6 +31,7 @@ router.get('/menu/items', async (req, res) => {
     }
 
     // Get restaurant ID from table lookup
+    console.log(`🔍 Looking up table ${table}...`);
     const { data: tableData, error: tableError } = await supabase
       .from('tables')
       .select('restaurant_id')
@@ -37,22 +40,25 @@ router.get('/menu/items', async (req, res) => {
       .single();
 
     if (tableError || !tableData) {
-      console.error('Table lookup error:', tableError);
+      console.error('❌ Table lookup error:', tableError?.message || 'Table not found');
       return res.status(404).json({
         statusCode: 404,
         success: false,
-        message: 'Table not found',
+        message: `Table ${table} not found in system`,
       });
     }
 
     const restaurantId = tableData.restaurant_id;
+    console.log(`✅ Found restaurant: ${restaurantId} for table ${table}`);
 
     // Get all menu items for this restaurant
+    console.log(`📦 Fetching menu items for restaurant ${restaurantId}...`);
     const result = await MenuService.getMenuItems(restaurantId, {
       limit: 100,
       skip: 0,
     });
 
+    console.log(`✅ Retrieved ${result?.length || 0} menu items`);
     res.status(200).json({
       statusCode: 200,
       success: true,
@@ -64,7 +70,7 @@ router.get('/menu/items', async (req, res) => {
     res.status(500).json({
       statusCode: 500,
       success: false,
-      message: error.message,
+      message: `Failed to load menu: ${error.message}`,
     });
   }
 });

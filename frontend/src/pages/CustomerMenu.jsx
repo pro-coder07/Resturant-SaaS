@@ -128,18 +128,30 @@ export default function CustomerMenu() {
   }
 
   if (apiError) {
+    const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'}/v1/customer/menu/items?table=${tableNumber}`;
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
         <div className="text-center max-w-md">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Menu</h1>
-          <p className="text-gray-600 mb-6">{apiError}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            Retry
-          </button>
+          <p className="text-gray-600 mb-4">{apiError}</p>
+          <div className="bg-gray-100 p-4 rounded text-left mb-4">
+            <p className="text-xs text-gray-600 font-mono break-all">{apiUrl}</p>
+          </div>
+          <div className="space-x-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => window.location.href = '/'}
+              className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+            >
+              Go Back
+            </button>
+          </div>
         </div>
       </div>
     );

@@ -11,12 +11,12 @@ export default function QRCodeModal({ table, restaurantName, onClose }) {
 
     const generateQR = async () => {
       try {
-        // Generate QR code that links to the menu page with table number
+        // Generate QR code that links to the Vercel frontend menu page
         const baseUrl = import.meta.env.PROD 
-          ? 'https://resturant-saas.onrender.com' 
+          ? 'https://restromaxsaas.vercel.app' 
           : window.location.origin;
         const qrValue = `${baseUrl}/menu?table=${table.tableNumber}`;
-        console.log('📱 Generating QR Code URL:', qrValue);
+        console.log('📱 Generating QR Code URL:', qrValue, '(Table:', table.tableNumber, ')');
 
         await QRCode.toCanvas(canvasRef.current, qrValue, {
           errorCorrectionLevel: 'H',
